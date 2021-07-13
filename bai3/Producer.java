@@ -1,32 +1,41 @@
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
-public class Producer implements Runnable{
+public class Producer extends Thread {
 
-    private final List<String> buffer;
-
-    public Producer (List<String> buffer){
-        this.buffer = buffer;
-    }
+    private static final int MAX_SIZE = 3;
+    private final List<String> messages = new ArrayList<>();
 
     @Override
     public void run() {
-        String[] messages = {"message1", "message2", "message3", "message4", "message5"};
-        for (String message : messages){
-            synchronized (buffer){
-                buffer.add(message);
-                try {
-                    Random random = new Random();
-                    Thread.sleep(random.nextInt(5000));
-                } catch (InterruptedException e){
-                    System.out.println(Thread.currentThread().getName() + " interrupted.");
-                }
+        try {
+            while (true) {
+                produce();
             }
-            System.out.println(Thread.currentThread().getName()+ " added " + message);
+        } catch (Exception exp) {
         }
-        System.out.println(Thread.currentThread().getName() + " added " + Main.EOF);
-        synchronized (buffer){
-            buffer.add(Main.EOF);
+    }
+
+    private synchronized void produce() throws Exception {
+        while (messages.size() == MAX_SIZE) {
+            System.out.println("Queue limit reached. Waiting for consumer");
+            wait();
+            System.out.println("Producer got notification from consumer");
         }
+        String data = LocalDateTime.now().toString();
+        messages.add(data);
+        System.out.println("Producer produced data");
+        notify();
+    }
+
+    public synchronized String consume() throws Exception {
+        notify();
+        while (messages.isEmpty()) {
+            wait();
+        }
+        String data = messages.get(0);
+        messages.remove(data);
+        return data;
     }
 }

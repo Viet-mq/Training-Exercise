@@ -1,27 +1,20 @@
-import java.util.ArrayList;
-import java.util.List;
-
 public class Main {
-    public static final String EOF = "EOF";
 
     public static void main(String[] args) {
+        Producer producer = new Producer();
+        producer.setName("Producer-1");
+        producer.start();
 
-        /*
-          The problems describes 2 threads, the Producer and Consumer,
-          sharing a common, fixed-sized buffer that is used as a queue
-           1. The Producer produces message, put that message into the buffer, and keep repeating this process
-           2. The Consumer consumes the message from shared buffer, one message at a time
-         */
+        Consumer consumer = new Consumer(producer);
+        consumer.setName("Consumer-1");
+        consumer.start();
 
-        List<String> buffer = new ArrayList<>();
+        Consumer consumer1 = new Consumer(producer);
+        consumer1.setName("Consumer-2");
+        consumer1.start();
 
-        Thread producerThread = new Thread(new Producer(buffer));
-        producerThread.setName("producerThread");
-
-        Thread consumerThread = new Thread(new Consumer(buffer));
-        consumerThread.setName("consumerThread");
-
-        producerThread.start();
-        consumerThread.start();
+        Consumer consumer2 = new Consumer(producer);
+        consumer2.setName("Consumer-3");
+        consumer2.start();
     }
 }
