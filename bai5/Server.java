@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -16,6 +17,11 @@ public class Server {
     private boolean stop;
     private ServerCmd serverCmd;
 
+    public static void main(String[] args) throws IOException {
+        Server server = new Server(args);
+        server.runWithCmd();
+    }
+    
     Server() {
     }
 
@@ -25,14 +31,13 @@ public class Server {
         fileDir = serverCmd.getFileDir();
     }
 
-    public static void main(String[] args) throws IOException {
-        Server server = new Server(args);
-        server.runWithCmd();
-    }
-
     private void runWithCmd() throws IOException {
         SocketChannel socketChannel = createServerSocketChannel(port);
-        readFileFromSocketChannel(socketChannel, fileDir);
+        if(!checkExistedFile(fileDir))
+            readFileFromSocketChannel(socketChannel, fileDir);
+        else{
+            System.out.println("File existed!!");
+        }
     }
 
     private void run() throws IOException {
@@ -71,6 +76,12 @@ public class Server {
 
         System.out.println("connection established .." + client.getRemoteAddress());
         return client;
+    }
+
+    private boolean checkExistedFile(String fileDir){
+        File tmpDir = new File(fileDir);
+        boolean exists = tmpDir.exists();
+        return exists;
     }
 
     public String getFileDir() {
