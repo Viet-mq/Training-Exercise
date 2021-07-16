@@ -12,6 +12,13 @@ public class Client {
     private String host;
     private port;
     ClientCmd clientCmd;
+    
+public static void main(String[] args) throws IOException {
+        Client client = new Client(args);
+        //Client client = new Client();
+        //client.run();
+        client.runWithCmd();
+    }
 
     Client(String[] args) {
         clientCmd = new ClientCmd(args);
