@@ -1,116 +1,86 @@
-import java.io.*;
-import java.net.Socket;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class Client {
+    private final String filePath;
+    private String host;
+    private port;
+    ClientCmd clientCmd;
 
-    private static Socket sock;
-    private static String fileName;
-    private static BufferedReader bufferReader;
-    private static PrintStream os;
-
-
-    public static void main(String[] args) throws IOException {
-        try {
-            sock = new Socket("127.0.0.1", 4444);
-            bufferReader = new BufferedReader(new InputStreamReader(System.in));
-        } catch (Exception e) {
-            System.err.println("Error - Try again.");
-            System.exit(1);
-        }
-
-        os = new PrintStream(sock.getOutputStream());
-        boolean done = false;
-        while (!done) {
-            try {
-                switch (selectAction()) {
-                    case "send":
-                        os.println("send");
-                        sendFile();
-                        break;
-                    case "get":
-                        os.println("get");
-                        System.err.print("File Name: ");
-                        fileName = bufferReader.readLine();
-                        os.println(fileName);
-                        receiveFile();
-                        break;
-                    case "exit":
-                        done = true;
-                        os.println("exit");
-                        System.out.println("Connection closed");
-                        break;
-                }
-            } catch (Exception e) {
-                System.err.println("Wrong command");
-            }
-        }
-
-        sock.close();
+    Client(String[] args) {
+        clientCmd = new ClientCmd(args);
+        host = clientCmd.getHost();
+        port = clientCmd.getPort();
+        filePath = clientCmd.getFilePath();
     }
 
-    public static String selectAction() throws IOException {
-        System.out.println();
-        System.out.println("send - Send File.");
-        System.out.println("get - Get File.");
-        System.out.println("exit - Exit.");
-        System.out.print("\nSelect one Option: ");
+    Client(){}
 
-        return bufferReader.readLine();
+    private void run() {
+        Client client = new Client();
+        client.setHost("127.0.0.1");
+        client.setPort(8888);
+        client.setFilePath("D:\\Picture\\WALLPAPER\\ThemeA\\img20.jpg");
+        SocketChannel socketChannel = client.CreateChannel(client.getHost(), client.getPort());
+        client.sendFile(socketChannel, client.getFilePath());
     }
 
-    public static void sendFile() {
-        try {
-            System.err.print("File Name: ");
-            fileName = bufferReader.readLine();
-
-            File myFile = new File(fileName);
-            byte[] mybytearray = new byte[(int) myFile.length()];
-
-            FileInputStream fis = new FileInputStream(myFile);
-            BufferedInputStream bis = new BufferedInputStream(fis);
-
-            DataInputStream dis = new DataInputStream(bis);
-            dis.readFully(mybytearray, 0, mybytearray.length);
-
-            OutputStream os = sock.getOutputStream();
-
-            DataOutputStream dos = new DataOutputStream(os);
-            dos.writeUTF(myFile.getName());
-            dos.writeLong(mybytearray.length);
-            dos.write(mybytearray, 0, mybytearray.length);
-            dos.flush();
-
-
-            System.out.println("File " + fileName + " send to server.");
-        } catch (Exception e) {
-            System.err.println("ERROR! " + e);
-        }
+    private void runWithCmd(){
+        SocketChannel socketChannel = CreateChannel(host, port);
+        sendFile(socketChannel, filePath);
     }
 
-    public static void receiveFile() {
-        try {
-            int bytesRead;
-            InputStream in = sock.getInputStream();
+    private void sendFind(SocketChannel socketChannel, String filePath) throws IOException {
+        Path path = Paths.get(filePath);
+        FileChannel inChannel = FileChannel.open(path);
 
-            DataInputStream clientData = new DataInputStream(in);
-
-            String fileName = clientData.readUTF();
-            OutputStream output = new FileOutputStream(("received_from_server_" + fileName));
-            long size = clientData.readLong();
-            byte[] buffer = new byte[1024];
-            while (size > 0 && (bytesRead = clientData.read(buffer, 0,
-                    (int) Math.min(buffer.length, size))) != -1) {
-                output.write(buffer, 0, bytesRead);
-                size -= bytesRead;
-            }
-            output.flush();
-
-            System.out.println("File " + fileName + " received from Server.");
-
-        } catch (IOException ex) {
-            Logger.getLogger(ClientConnection.class.getName()).log(Level.SEVERE, null, ex);
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        while(inChannel.read(buffer) > 0){
+            buffer.flip();
+            socketChannel.write(buffer);
+            buffer.clear();
         }
+        socketChannel.close();
+    }
+
+    private SocketChannel CreateChannel(String host, int port) throws IOException{
+        SocketChannel socketChannel = SocketChannel.open();
+        socketChannel.configureBlocking(true);
+
+        SocketAddress sockAddr = new InetSocketAddress(host, port);
+        socketChannel.connect(sockAddr);
+        System.out.println("Connected... Now sending file");
+        return socketChannel;
+    }
+    
+
+    public String getFilePath(){
+        return filePath;
+    }
+
+    public void setFilePath(String filePath){
+        this.filePath = filePath;
+    }
+
+    public int getPort(){
+        return port;
+    }
+
+    public void setPort(int port){
+        this.port = port;
+    }
+
+    public String getHost(){
+        return host;
+    }
+
+    public void setHost(String host){
+        this.host = host;
     }
 }
